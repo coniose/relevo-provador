@@ -98,6 +98,26 @@ new GLTFLoader().load('./assets/tshirt.glb',
   ()=>{ placeholderShirt(); }   // sem asset → placeholder
 );
 
+// ---------- botão "Projetar" (flutua à frente no AR; tocar com o dedo projeta a camisa) ----------
+function makeButtonTexture(label){
+  const c = document.createElement('canvas'); c.width = 512; c.height = 200;
+  const x = c.getContext('2d');
+  x.fillStyle = '#C8743C';
+  x.beginPath(); x.roundRect(8, 8, c.width-16, c.height-16, 36); x.fill();
+  x.fillStyle = '#1a1206';
+  x.font = '700 86px system-ui, sans-serif';
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText(label, c.width/2, c.height/2 + 4);
+  const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t;
+}
+const projectBtn = new THREE.Group();
+{
+  const mat = new THREE.MeshBasicMaterial({ map: makeButtonTexture('Projetar'), transparent:true, side:THREE.DoubleSide });
+  projectBtn.add(new THREE.Mesh(new THREE.PlaneGeometry(0.20, 0.078), mat));
+}
+projectBtn.visible = false;
+scene.add(projectBtn);
+
 // ---------- mãos ----------
 // SEM mão virtual: em passthrough você vê suas mãos reais e o celular sem oclusão.
 // Só usamos os joints do hand-tracking para detectar a pinça e gravar o take.
@@ -173,21 +193,37 @@ function recordFrame(t){
   const rw = jointPos(hands[1],'wrist',tmpR); if(rw) frame.rightWrist = rw.toArray().map(n=>+n.toFixed(4));
   take.push(frame);
 }
-// posiciona a camisa ~0.5m à frente da câmera quando a sessão começa
-// (no AR do Quest a origem é a cabeça, não o chão — sem isso a camisa some pra cima)
-let needsPlacement = false;
-const _camPos = new THREE.Vector3(), _camDir = new THREE.Vector3();
-function placeGarmentInFront(){
+// no AR do Quest a origem é a cabeça (não o chão) — posicionamos objetos relativos à câmera
+const _camPos = new THREE.Vector3(), _camDir = new THREE.Vector3(), _q = new THREE.Quaternion(), _tip = new THREE.Vector3();
+function frontOfCamera(target, dist){
   const cam = renderer.xr.getCamera();
   cam.getWorldPosition(_camPos);
-  cam.getWorldDirection(_camDir);     // aponta para a frente do olhar
+  cam.getWorldDirection(_camDir);
   _camDir.y = 0;
   if (_camDir.lengthSq() < 1e-4) _camDir.set(0,0,-1);
   _camDir.normalize();
-  garment.position.copy(_camPos).addScaledVector(_camDir, 0.5);
-  garment.position.y -= 0.05;         // um pouco abaixo da linha dos olhos
+  target.position.copy(_camPos).addScaledVector(_camDir, dist);
 }
-renderer.xr.addEventListener('sessionstart', ()=>{ take.length=0; recording=true; needsPlacement=true; });
+
+// fluxo: ao entrar em AR aparece o botão "Projetar"; ao tocá-lo, a camisa surge à frente
+let projected = false, needsButtonPlacement = false;
+function updateButton(){
+  if (!projectBtn.visible) return;
+  renderer.xr.getCamera().getWorldQuaternion(_q);
+  projectBtn.quaternion.copy(_q);                       // encara o usuário (texto legível)
+  for (const hand of hands){
+    const tip = jointPos(hand, 'index-finger-tip', _tip);
+    if (tip && tip.distanceTo(projectBtn.position) < 0.06){ projectGarment(); break; }
+  }
+}
+function projectGarment(){
+  frontOfCamera(garment, 0.5); garment.position.y -= 0.05;
+  garment.visible = true; projectBtn.visible = false; projected = true;
+}
+renderer.xr.addEventListener('sessionstart', ()=>{
+  take.length = 0; recording = true;
+  garment.visible = false; projected = false; needsButtonPlacement = true;
+});
 renderer.xr.addEventListener('sessionend',   ()=>{ recording=false; stat('take pronto: '+take.length+' frames — exporte o JSON'); });
 
 document.getElementById('exportBtn').onclick = ()=>{
@@ -207,9 +243,14 @@ if (!('xr' in navigator)) {
 function stat(s){ document.getElementById('stat').textContent = s; }
 renderer.setAnimationLoop((t)=>{
   if (renderer.xr.isPresenting){
-    if (needsPlacement){ placeGarmentInFront(); needsPlacement=false; }
-    updateGrab();
-    stat(grabbedBy ? 'segurando · op '+targetOpacity.toFixed(2) : 'faça pinça perto da camisa');
+    if (needsButtonPlacement){ frontOfCamera(projectBtn, 0.55); projectBtn.visible=true; needsButtonPlacement=false; }
+    if (!projected){
+      updateButton();
+      stat('toque em "Projetar" com o dedo indicador');
+    } else {
+      updateGrab();
+      stat(grabbedBy ? 'segurando · op '+targetOpacity.toFixed(2) : 'faça pinça perto da camisa');
+    }
   } else if (controls){ controls.update(); }
   updateFade();
   recordFrame(t);
