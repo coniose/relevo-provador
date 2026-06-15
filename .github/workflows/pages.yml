@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Opt-in pro Node 24 (as actions ainda embarcam Node 20, deprecado a partir de 16/06/2026)
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 permissions:
   contents: read
   pages: write

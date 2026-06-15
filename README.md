@@ -38,6 +38,13 @@ pós-produção pintar a versão CGI vestida.
 Abra a URL no Chrome/Edge desktop: sem XR, a cena cai para **OrbitControls**
 (gire o modelo com o mouse). Útil para conferir o asset e a iluminação.
 
+## Vitrine (model-viewer) — desktop / celular / Quest
+
+`vitrine.html` é uma vitrine de loja standalone usando `<model-viewer>` (Google,
+cross-browser, com WebXR pra AR). Gira o produto, troca cor/tamanho e tem botão
+"Provar no seu espaço" (AR no Quest/celular; degrada com mensagem no desktop).
+URL: **https://coniose.github.io/relevo-provador/vitrine.html**
+
 ---
 
 ## ⚠️ Testar ANTES de agendar a gravação
@@ -75,7 +82,8 @@ de trabalho para algo que a câmera não distingue de um overlay bem-feito.
 
 ```
 relevo-provador/
-  index.html                 # cena WebXR (three.js)
+  index.html                 # cena WebXR (three.js) — shot 4 / captura no Quest
+  vitrine.html               # vitrine de loja (model-viewer) p/ desktop, celular e Quest
   assets/
     tshirt.glb               # camiseta (ausente → placeholder)
     README.md

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ÓRBITA — Provador Espacial</title>
+<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0E0F13;        /* fundo carvão azulado */
+    --ink-2:#16181F;      /* superfície elevada */
+    --paper:#F2EFE9;      /* texto/contraste quente */
+    --copper:#C8743C;     /* acento metálico — primário */
+    --copper-soft:#E0A877;
+    --cyan:#3DD6D0;       /* RESERVADO: camada espacial / AR */
+    --mute:#7C828C;       /* legendas */
+    --line:rgba(242,239,233,.10);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'Inter',system-ui,sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+
+  /* ---------- top bar ---------- */
+  header{
+    border-bottom:1px solid var(--line);
+    position:sticky;top:0;z-index:20;
+    background:rgba(14,15,19,.78);
+    backdrop-filter:blur(14px);
+  }
+  .bar{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .brand{font-family:'Space Grotesk';font-weight:700;font-size:1.18rem;letter-spacing:.22em}
+  .brand span{color:var(--copper)}
+  .nav{display:flex;gap:26px;font-size:.82rem;color:var(--mute);font-weight:500}
+  .nav a{color:inherit;text-decoration:none;transition:color .2s}
+  .nav a:hover{color:var(--paper)}
+  .cart{font-family:'Space Mono';font-size:.78rem;color:var(--mute)}
+
+  /* ---------- product ---------- */
+  .product{
+    display:grid;grid-template-columns:1.05fr .95fr;gap:54px;
+    padding:64px 0 40px;align-items:center;
+  }
+  .stage{position:relative}
+  .eyebrow{
+    font-family:'Space Mono';font-size:.72rem;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--copper-soft);margin-bottom:14px;
+  }
+  /* signature: o modelo "elevado" do plano, com sombra projetada e anel espacial */
+  .viewer-shell{
+    position:relative;border-radius:20px;
+    background:radial-gradient(120% 90% at 50% 18%,#1C1F28 0%,#101218 60%,#0B0C10 100%);
+    border:1px solid var(--line);
+    overflow:hidden;
+    aspect-ratio:1/1;
+  }
+  model-viewer{width:100%;height:100%;--poster-color:transparent;background:transparent}
+  .spatial-tag{
+    position:absolute;top:16px;left:16px;z-index:4;
+    display:flex;align-items:center;gap:8px;
+    font-family:'Space Mono';font-size:.66rem;letter-spacing:.12em;
+    color:var(--cyan);text-transform:uppercase;
+    border:1px solid rgba(61,214,208,.35);border-radius:100px;
+    padding:6px 12px;background:rgba(61,214,208,.06);
+  }
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);
+    box-shadow:0 0 0 0 rgba(61,214,208,.6);animation:pulse 2.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(61,214,208,.55)}70%{box-shadow:0 0 0 9px rgba(61,214,208,0)}100%{box-shadow:0 0 0 0 rgba(61,214,208,0)}}
+  .hint{
+    position:absolute;bottom:14px;left:0;right:0;text-align:center;z-index:4;
+    font-family:'Space Mono';font-size:.68rem;color:var(--mute);pointer-events:none;
+  }
+
+  .info h1{font-family:'Space Grotesk';font-weight:700;font-size:2.6rem;line-height:1.04;letter-spacing:-.01em}
+  .price{font-family:'Space Mono';font-size:1.05rem;color:var(--copper-soft);margin:10px 0 22px}
+  .desc{color:#C9CCD2;font-size:.96rem;max-width:42ch;margin-bottom:28px}
+
+  .label{font-family:'Space Mono';font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin-bottom:10px}
+  .row{margin-bottom:24px}
+  .chips{display:flex;gap:10px;flex-wrap:wrap}
+  .chip{
+    border:1px solid var(--line);background:var(--ink-2);color:var(--paper);
+    border-radius:10px;padding:9px 15px;font-size:.85rem;cursor:pointer;
+    font-family:'Inter';transition:border-color .18s,transform .18s;
+  }
+  .chip:hover{transform:translateY(-1px)}
+  .chip[aria-pressed="true"]{border-color:var(--copper);color:var(--copper-soft)}
+  .sizes .chip{min-width:50px;text-align:center;font-family:'Space Mono';font-size:.82rem}
+
+  .actions{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+  .btn{
+    border:none;border-radius:12px;padding:15px 22px;font-size:.92rem;font-weight:600;
+    cursor:pointer;font-family:'Inter';transition:transform .18s,filter .18s;
+  }
+  .btn:hover{transform:translateY(-2px)}
+  .btn-buy{background:var(--copper);color:#1a1206}
+  .btn-buy:hover{filter:brightness(1.06)}
+  /* AR/espacial = cyan, a única ação espacial */
+  .btn-ar{
+    background:transparent;color:var(--cyan);
+    border:1px solid rgba(61,214,208,.5);
+    display:inline-flex;align-items:center;gap:10px;
+  }
+  .btn-ar:hover{background:rgba(61,214,208,.08)}
+  .btn-ar svg{width:17px;height:17px}
+
+  /* ---------- pipeline (honesto) ---------- */
+  .pipeline{border-top:1px solid var(--line);padding:48px 0 70px}
+  .pl-head{font-family:'Space Grotesk';font-weight:600;font-size:1.25rem;margin-bottom:6px}
+  .pl-sub{color:var(--mute);font-size:.9rem;margin-bottom:32px;max-width:62ch}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .step{
+    border:1px solid var(--line);border-radius:16px;padding:22px;background:var(--ink-2);
+    position:relative;
+  }
+  .step .n{font-family:'Space Mono';font-size:.72rem;color:var(--copper);letter-spacing:.1em}
+  .step h3{font-family:'Space Grotesk';font-weight:600;font-size:1.02rem;margin:10px 0 8px}
+  .step p{font-size:.85rem;color:#AEB2BA}
+  .step .tag{
+    display:inline-block;margin-top:12px;font-family:'Space Mono';font-size:.64rem;
+    padding:4px 9px;border-radius:6px;letter-spacing:.08em;text-transform:uppercase;
+  }
+  .tag.real{color:var(--cyan);border:1px solid rgba(61,214,208,.3)}
+  .tag.hard{color:var(--copper-soft);border:1px solid rgba(224,168,119,.3)}
+
+  footer{border-top:1px solid var(--line);padding:26px 0;color:var(--mute);font-size:.78rem;font-family:'Space Mono'}
+  footer b{color:var(--copper-soft);font-weight:400}
+
+  @media (max-width:860px){
+    .product{grid-template-columns:1fr;gap:34px;padding:40px 0 30px}
+    .info h1{font-size:2.1rem}
+    .nav{display:none}
+    .steps{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important;scroll-behavior:auto}
+  }
+  :focus-visible{outline:2px solid var(--cyan);outline-offset:3px;border-radius:6px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap bar">
+    <div class="brand">ÓR<span>·</span>BITA</div>
+    <nav class="nav">
+      <a href="#">Tênis</a><a href="#">Botas</a><a href="#">Coleção 26</a><a href="#">Sobre</a>
+    </nav>
+    <div class="cart">SACOLA · 0</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="product">
+    <div class="stage">
+      <div class="viewer-shell">
+        <div class="spatial-tag"><span class="dot"></span>pronto p/ espaço</div>
+        <model-viewer
+          id="shoe"
+          src="https://modelviewer.dev/shared-assets/models/glTF-Sample-Models/2.0/MaterialsVariantsShoe/glTF-Binary/MaterialsVariantsShoe.glb"
+          alt="Tênis ÓRBITA em 3D"
+          camera-controls
+          touch-action="pan-y"
+          auto-rotate
+          auto-rotate-delay="600"
+          rotation-per-second="18deg"
+          shadow-intensity="1.1"
+          exposure="1.05"
+          environment-image="neutral"
+          ar
+          ar-modes="webxr scene-viewer quick-look"
+          ar-scale="fixed">
+        </model-viewer>
+        <div class="hint">arraste para girar · role para aproximar</div>
+      </div>
+    </div>
+
+    <div class="info">
+      <div class="eyebrow">edição espacial · 2026</div>
+      <h1>Modelo Órbita Low</h1>
+      <div class="price">R$ 749,00</div>
+      <p class="desc">O primeiro calçado da casa que você vê em volume antes de comprar. Gire, aproxime e, no visor, traga pro chão da sua sala em escala real.</p>
+
+      <div class="row">
+        <div class="label">Cor</div>
+        <div class="chips" id="variants"><span class="chip" aria-disabled="true">carregando variantes…</span></div>
+      </div>
+
+      <div class="row">
+        <div class="label">Tamanho (BR)</div>
+        <div class="chips sizes" id="sizes"></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-buy">Adicionar à sacola</button>
+        <button class="btn btn-ar" id="arBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg>
+          Provar no seu espaço
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="pipeline">
+    <div class="pl-head">Como o volume chega aqui</div>
+    <p class="pl-sub">A vitrine que você está vendo é a etapa que já roda hoje. A geração do 3D a partir de fotos é um problema próprio — e está marcado com honestidade abaixo.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="n">01</div>
+        <h3>Fotos do produto</h3>
+        <p>As imagens 2D que a loja já tem — lado, frente, cima. Insumo de entrada do pipeline.</p>
+        <span class="tag real">já existe</span>
+      </div>
+      <div class="step">
+        <div class="n">02</div>
+        <h3>Reconstrução 3D</h3>
+        <p>Foto → malha via Object Capture (fotogrametria) ou IA image-to-3D (TripoSR, TRELLIS, Hunyuan3D, API Meshy/Tripo). Exige GPU ou API.</p>
+        <span class="tag hard">problema separado · depende de hardware</span>
+      </div>
+      <div class="step">
+        <div class="n">03</div>
+        <h3>Exibição + provador</h3>
+        <p>O .glb/.usdz entra na página e vira objeto manipulável. WebXR no Quest, model element no Vision Pro.</p>
+        <span class="tag real">rodando neste protótipo</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  protótipo · <b>Relevo</b> — provador espacial · model-viewer + WebXR · alvo: Meta Quest Browser
+</footer>
+
+<script>
+  const mv = document.getElementById('shoe');
+  const variantsEl = document.getElementById('variants');
+  const sizesEl = document.getElementById('sizes');
+  const arBtn = document.getElementById('arBtn');
+
+  // tamanhos (cosmético, mas funcional pro vídeo)
+  ['37','38','39','40','41','42','43'].forEach((s,i)=>{
+    const b=document.createElement('button');
+    b.className='chip';b.textContent=s;b.setAttribute('aria-pressed', i===3?'true':'false');
+    b.onclick=()=>{sizesEl.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');};
+    sizesEl.appendChild(b);
+  });
+
+  // variantes de cor reais lidas do próprio modelo
+  function prettyName(v){
+    const map={midnight:'Meia-noite',beach:'Areia',street:'Asfalto'};
+    return map[v] || v.charAt(0).toUpperCase()+v.slice(1);
+  }
+  mv.addEventListener('load',()=>{
+    const names = mv.availableVariants || [];
+    variantsEl.innerHTML='';
+    if(!names.length){variantsEl.innerHTML='<span class="chip" aria-disabled="true">cor padrão</span>';return;}
+    names.forEach((name,i)=>{
+      const b=document.createElement('button');
+      b.className='chip';b.textContent=prettyName(name);
+      b.setAttribute('aria-pressed', i===0?'true':'false');
+      if(i===0) mv.variantName=name;
+      b.onclick=()=>{
+        mv.variantName=name;
+        variantsEl.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed','false'));
+        b.setAttribute('aria-pressed','true');
+      };
+      variantsEl.appendChild(b);
+    });
+  });
+
+  // botão AR custom -> dispara o modo espacial do model-viewer
+  arBtn.addEventListener('click',()=>{
+    if(mv.canActivateAR){ mv.activateAR(); }
+    else { arBtn.textContent='Abra no Quest / iPhone p/ provar'; }
+  });
+</script>
+</body>
+</html>
