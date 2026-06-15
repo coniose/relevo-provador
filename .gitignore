@@ -1,0 +1,13 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Takes gravados no headset (não versionar capturas; o exemplo fica versionado)
+take-mao.json
+!take-mao.example.json
+
+# Assets pesados opcionais (descomente se não quiser versionar o GLB)
+# assets/*.glb
