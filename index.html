@@ -40,7 +40,6 @@
 <script type="module">
 import * as THREE from 'three';
 import { ARButton } from 'three/addons/webxr/ARButton.js';
-import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
@@ -83,18 +82,28 @@ function placeholderShirt(){
   body.geometry.translate(0,0,0);
   garment.add(body, l, r);
 }
+// normaliza qualquer GLB: centraliza na origem do grupo e ajusta a maior dimensão p/ ~0.55m
+function fitGarment(obj, targetSize){
+  const box = new THREE.Box3().setFromObject(obj);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const center = new THREE.Vector3(); box.getCenter(center);
+  const maxDim = Math.max(size.x, size.y, size.z) || 1;
+  const s = targetSize / maxDim;
+  obj.scale.setScalar(s);
+  obj.position.sub(center.multiplyScalar(s)); // recentraliza
+}
 new GLTFLoader().load('./assets/tshirt.glb',
-  (gltf)=>{ makeMatTransparent(gltf.scene); gltf.scene.scale.setScalar(1.0); garment.add(gltf.scene); },
+  (gltf)=>{ makeMatTransparent(gltf.scene); fitGarment(gltf.scene, 0.55); garment.add(gltf.scene); },
   undefined,
   ()=>{ placeholderShirt(); }   // sem asset → placeholder
 );
 
 // ---------- mãos ----------
-const handFactory = new XRHandModelFactory();
+// SEM mão virtual: em passthrough você vê suas mãos reais e o celular sem oclusão.
+// Só usamos os joints do hand-tracking para detectar a pinça e gravar o take.
 const hands = [];
 for (let i=0;i<2;i++){
   const hand = renderer.xr.getHand(i);
-  hand.add(handFactory.createHandModel(hand, 'mesh'));
   scene.add(hand);
   hands.push(hand);
 }
@@ -164,7 +173,21 @@ function recordFrame(t){
   const rw = jointPos(hands[1],'wrist',tmpR); if(rw) frame.rightWrist = rw.toArray().map(n=>+n.toFixed(4));
   take.push(frame);
 }
-renderer.xr.addEventListener('sessionstart', ()=>{ take.length=0; recording=true; });
+// posiciona a camisa ~0.5m à frente da câmera quando a sessão começa
+// (no AR do Quest a origem é a cabeça, não o chão — sem isso a camisa some pra cima)
+let needsPlacement = false;
+const _camPos = new THREE.Vector3(), _camDir = new THREE.Vector3();
+function placeGarmentInFront(){
+  const cam = renderer.xr.getCamera();
+  cam.getWorldPosition(_camPos);
+  cam.getWorldDirection(_camDir);     // aponta para a frente do olhar
+  _camDir.y = 0;
+  if (_camDir.lengthSq() < 1e-4) _camDir.set(0,0,-1);
+  _camDir.normalize();
+  garment.position.copy(_camPos).addScaledVector(_camDir, 0.5);
+  garment.position.y -= 0.05;         // um pouco abaixo da linha dos olhos
+}
+renderer.xr.addEventListener('sessionstart', ()=>{ take.length=0; recording=true; needsPlacement=true; });
 renderer.xr.addEventListener('sessionend',   ()=>{ recording=false; stat('take pronto: '+take.length+' frames — exporte o JSON'); });
 
 document.getElementById('exportBtn').onclick = ()=>{
@@ -184,6 +207,7 @@ if (!('xr' in navigator)) {
 function stat(s){ document.getElementById('stat').textContent = s; }
 renderer.setAnimationLoop((t)=>{
   if (renderer.xr.isPresenting){
+    if (needsPlacement){ placeGarmentInFront(); needsPlacement=false; }
     updateGrab();
     stat(grabbedBy ? 'segurando · op '+targetOpacity.toFixed(2) : 'faça pinça perto da camisa');
   } else if (controls){ controls.update(); }
